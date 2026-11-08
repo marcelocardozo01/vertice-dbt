@@ -22,7 +22,7 @@ jobs:
         run: uv sync --dev
 
       - name: Lint do Python
-        run: uv run ruff check scripts
+        run: uv run ruff check scripts vertice_dagster
 
       - name: Extração (planilhas -> Parquet)
         run: uv run python scripts/extract.py
@@ -35,6 +35,9 @@ jobs:
 
       - name: dbt docs
         run: uv run dbt docs generate --target ci
+
+      - name: Validar definições do Dagster
+        run: uv run dagster definitions validate
 
       - name: Publicar artefatos da documentação
         uses: actions/upload-artifact@v4

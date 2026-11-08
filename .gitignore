@@ -9,6 +9,13 @@ package-lock.yml
 data/warehouse/*.duckdb
 data/warehouse/*.duckdb.wal
 
+# saída da exportação para o Power BI (gerada pelo ativo exports_power_bi)
+data/exports/
+
+# dagster (estado local das execuções)
+.dagster_home/
+tmp*/
+
 # python
 .venv/
 __pycache__/

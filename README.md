@@ -1,9 +1,10 @@
-# Vértice Distribuidora: ELT com dbt + DuckDB
+# Vértice Distribuidora: ELT com dbt + DuckDB, orquestrado pelo Dagster
 
 Reconstrução, em **dbt**, da camada de transformação do BI comercial da Vértice Distribuidora
-(distribuidora fictícia de produtos de limpeza). O pipeline original era um conjunto de scripts
-Python rodando SQL em ordem; aqui as mesmas regras viram modelos versionados, com testes,
-documentação e linhagem, executados por `dbt build` e verificados em CI a cada push.
+(distribuidora fictícia de produtos de limpeza), orquestrada de ponta a ponta pelo **Dagster**.
+O pipeline original era um conjunto de scripts Python rodando SQL em ordem; aqui as mesmas
+regras viram modelos versionados, com testes, documentação e linhagem, executados por
+`dbt build`, agendados pelo Dagster e verificados em CI a cada push.
 
 > **Dados 100% fictícios**, gerados com semente fixa. As marcas, clientes, vendedores e
 > números replicam a arquitetura e as regras de um BI real, sem nenhum dado real.
@@ -17,7 +18,10 @@ documentação e linhagem, executados por `dbt build` e verificados em CI a cada
 - **68 testes de dados**: unicidade, nulos, valores aceitos, integridade referencial, testes
   compostos com `dbt_utils` e três testes singulares, incluindo uma reconciliação entre marts.
 - **Documentação e linhagem** geradas por `dbt docs`.
-- **CI no GitHub Actions**: lint, extração, `dbt build` e publicação da documentação.
+- **Orquestração com Dagster**: extração, cada modelo dbt e a exportação para o Power BI como
+  ativos em um único grafo; os testes do dbt viram checagens de ativo; agendamento diário.
+- **CI no GitHub Actions**: lint, extração, `dbt build`, documentação e validação das
+  definições do Dagster.
 - **Reconciliação com o pipeline original**: linhas, litros e distribuição por tipo batem.
 
 ## Arquitetura
@@ -73,6 +77,33 @@ uv run dbt docs generate && uv run dbt docs serve
 
 `dbt build` leva cerca de 20 segundos e termina com `PASS=89 ERROR=0`.
 
+### Orquestração com Dagster
+
+```bash
+uv run dagster dev            # abre a UI em http://127.0.0.1:3000
+```
+
+Na UI, o job `elt_vertice` materializa tudo na ordem certa: planilhas Excel → Parquet,
+`dbt build` (modelos + testes como asset checks) e exportação dos marts para o Power BI.
+O agendamento `elt_diario` roda em dias úteis às 06:00 (horário de Brasília) e começa
+desligado. Pela linha de comando:
+
+```bash
+uv run dagster job execute -m vertice_dagster.definitions -j elt_vertice
+```
+
+![Grafo de ativos no Dagster](docs/images/dagster_lineage.png)
+
+![Execução do job no Dagster](docs/images/dagster_run.png)
+
+Como está montado (`vertice_dagster/`):
+
+- `project.py`: aponta o `DbtProject` para a raiz do repositório e gera o manifest.
+- `assets.py`: `planilhas_comerciais` (multi-asset com as mesmas chaves das fontes dbt,
+  por isso aparece ligado aos modelos), `vertice_dbt_assets` (`@dbt_assets` com um translator
+  que agrupa por camada) e `exports_power_bi` (depende dos marts e grava Parquet ZSTD).
+- `definitions.py`: job, agendamento e o recurso `DbtCliResource`.
+
 ## Estrutura
 
 ```
@@ -85,8 +116,9 @@ macros/                          conversão de datas AAAAMMDD, código de client
 tests/                           testes singulares (volume negativo, cobertura mínima, reconciliação entre marts)
 seeds/                           de-para de indicadores e feriados (CSV versionado)
 scripts/extract.py               etapa E do ELT: Excel -> Parquet, lendo colunas pelo nome
+vertice_dagster/                 orquestração: ativos, job, agendamento e integração dagster-dbt
 data/raw/                        Parquet brutos (fictícios, 1,8 MB) para o projeto rodar em qualquer máquina
-.github/workflows/ci.yml         lint + extract + dbt build + docs a cada push
+.github/workflows/ci.yml         lint + extract + dbt build + docs + validação do Dagster a cada push
 ```
 
 ## Decisões de projeto
@@ -101,10 +133,11 @@ data/raw/                        Parquet brutos (fictícios, 1,8 MB) para o proj
 
 ## Próximos passos
 
-1. Orquestração com agendamento e alertas (Dagster, com integração nativa ao dbt).
+1. Sensores no Dagster: disparar o ELT quando uma planilha nova chegar na pasta de origem.
 2. Coberturas por marca, segmento e linha eco, portando os SQL restantes do pipeline original.
 3. Metas de cobertura por indicador (`stg_metas_cobertura_planilha` já está pronta).
 4. Modelos incrementais em `fct_pedidos` quando a fonte passar a ser diária.
+5. Trocar o DuckDB por um warehouse na nuvem alterando só o `profiles.yml`.
 
 ## Projeto relacionado
 
