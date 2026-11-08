@@ -30,6 +30,9 @@ jobs:
       - name: dbt deps
         run: uv run dbt deps
 
+      - name: Pasta do warehouse DuckDB
+        run: mkdir -p data/warehouse data/exports
+
       - name: dbt build (seeds + modelos + testes)
         run: uv run dbt build --target ci
 

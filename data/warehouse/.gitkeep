@@ -1,0 +1,2 @@
+# Pasta do banco DuckDB local (vertice.duckdb, ignorado pelo Git). Mantida vazia no repositório
+# para que `dbt build` consiga criar o arquivo em qualquer máquina e na CI.
