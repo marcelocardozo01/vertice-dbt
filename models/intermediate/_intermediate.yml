@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: int_produto_classificado
+    description: Classificação de cada SKU (marca, linha eco, refil, galão, concentrado). Fonte única para coberturas e indicadores.
+    columns:
+      - name: codigo_alternativo
+        tests: [unique, not_null]
+      - name: marca
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["LIMPORA", "BRILHAX", "NUVELLA", "ZESTRA", "VERDANTA", "ECOLIM", "BROTA", "MARE", "LIMPORA ZERO", "SUAVITTA", "FRESCOR", "OUTRAS"]
+
+  - name: int_pedidos_enriquecidos
+    description: Itens de pedido com cliente, produto e vendedor da carteira resolvidos, sem filtro de venda efetiva.
+    columns:
+      - name: codigo_vendedor_carteira
+        tests: [not_null]
+      - name: litros
+        tests: [not_null]
+
+  - name: int_cobertura_itens
+    description: Itens válidos para cobertura com quantidade acumulada no mês, sem o corte de 1 caixa.
+    columns:
+      - name: qtd_acumulada
+        tests: [not_null]

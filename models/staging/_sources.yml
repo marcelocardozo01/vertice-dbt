@@ -1,0 +1,54 @@
+version: 2
+
+sources:
+  - name: erp
+    description: >
+      Extração do ERP comercial da Vértice Distribuidora (base fictícia, gerada com semente fixa)
+      mais as planilhas do time comercial, tudo em Parquet dentro de data/raw.
+      O dbt lê os arquivos direto, sem etapa de carga, usando o adaptador DuckDB.
+    meta:
+      external_location: "data/raw/{name}.parquet"
+    tables:
+      - name: pedidos
+        description: Itens de pedido. Uma linha por pedido x produto x ocorrência. Reprogramados são copiados a cada dia até a entrega.
+        columns:
+          - name: NUMERO_PEDIDO
+            tests: [not_null]
+          - name: CODIGO_CLIENTE
+            tests: [not_null]
+          - name: STATUS
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: ["ACERTADO", "ABERTO", "REPROGRAMADO", "CANCELADO"]
+          - name: OCORRENCIA
+            description: 1 = venda, 2 = bonificação.
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: [1, 2]
+                    quote: false
+      - name: clientes
+        description: Cadastro de pontos de venda. CODIGO_VENDEDOR é o vendedor da carteira (dono do cliente).
+        columns:
+          - name: CODIGO_CLIENTE
+            tests: [unique, not_null]
+      - name: produtos
+        description: Cadastro de SKUs com fator de litros por caixa e quantidade por embalagem.
+        columns:
+          - name: CODIGO_ALTERNATIVO
+            tests: [unique, not_null]
+      - name: produtos_linha
+        description: Linha comercial de cada SKU.
+      - name: categorias
+        description: Categorias de produto (REFIL 1L, GALAO 5L...).
+      - name: canais
+        description: Canais de cliente.
+      - name: motivos_devolucao
+        description: Motivos de devolução usados nos pedidos.
+      - name: metas_volume
+        description: Meta mensal em caixas por vendedor e produto, vinda do ERP.
+      - name: hierarquia_vendas
+        description: Planilha do comercial com a hierarquia vendedor > supervisor > gerente por mês. Convertida por scripts/extract.py.
+      - name: metas_cobertura_planilha
+        description: Metas de cobertura por indicador, lidas da aba RESUMO das planilhas mensais. Convertida por scripts/extract.py.

@@ -1,0 +1,35 @@
+name: vertice_dbt
+version: "1.0.0"
+profile: vertice_dbt
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+
+target-path: target
+clean-targets: [target, dbt_packages]
+
+models:
+  vertice_dbt:
+    # staging: 1 modelo por tabela de origem, só renomeia e tipa
+    staging:
+      +materialized: view
+      +schema: staging
+    # intermediate: joins e cálculos reutilizados por mais de um mart
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    # marts: tabelas finais consumidas pelo BI
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  vertice_dbt:
+    +delimiter: ";"
+    +schema: seeds
+    feriados:
+      +column_types:
+        DATA: date

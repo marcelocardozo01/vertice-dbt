@@ -1,0 +1,71 @@
+version: 2
+
+models:
+  - name: stg_pedidos
+    description: Itens de pedido tipados. Datas convertidas de AAAAMMDD, motivo de devolução vazio vira nulo.
+    columns:
+      - name: numero_pedido
+        tests: [not_null]
+      - name: codigo_cliente
+        tests: [not_null]
+      - name: codigo_produto_alternativo
+        tests: [not_null]
+      - name: data_emissao
+        tests: [not_null]
+      - name: status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["ACERTADO", "ABERTO", "REPROGRAMADO", "CANCELADO"]
+      - name: ocorrencia
+        description: 1 = venda, 2 = bonificação.
+
+  - name: stg_clientes
+    description: Pontos de venda. codigo_vendedor_carteira é quem é dono do cliente, independente de quem digitou o pedido.
+    columns:
+      - name: codigo_cliente
+        tests: [unique, not_null]
+      - name: codigo_vendedor_carteira
+        tests: [not_null]
+
+  - name: stg_produtos
+    description: SKUs com fator de litros por caixa, quantidade por embalagem e linha comercial.
+    columns:
+      - name: codigo_alternativo
+        tests: [unique, not_null]
+      - name: fator_litros
+        tests: [not_null]
+      - name: qtd_embalagem
+        tests: [not_null]
+
+  - name: stg_categorias
+    columns:
+      - name: codigo_categoria
+        tests: [unique, not_null]
+
+  - name: stg_canais
+    columns:
+      - name: codigo_canal
+        tests: [unique, not_null]
+
+  - name: stg_motivos_devolucao
+    columns:
+      - name: codigo_motivo_devolucao
+        tests: [unique, not_null]
+
+  - name: stg_metas_volume
+    description: Meta mensal em caixas por vendedor e produto.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [mes_ref, codigo_vendedor, codigo_produto_alternativo]
+
+  - name: stg_hierarquia_vendas
+    description: Hierarquia comercial por mês. Uma linha por vendedor e mês.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [mes, codigo_vendedor]
+
+  - name: stg_metas_cobertura_planilha
+    description: Metas de cobertura por indicador, nível e mês, como vieram da planilha.

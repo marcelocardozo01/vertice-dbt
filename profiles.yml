@@ -1,0 +1,15 @@
+# Perfil de conexão. Fica no repositório porque o alvo é um DuckDB local,
+# sem credenciais. O dbt procura este arquivo na pasta atual antes de ~/.dbt.
+vertice_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: data/warehouse/vertice.duckdb
+      schema: main
+      threads: 4
+    ci:
+      type: duckdb
+      path: data/warehouse/vertice_ci.duckdb
+      schema: main
+      threads: 2

@@ -1,0 +1,21 @@
+# dbt
+target/
+dbt_packages/
+logs/
+package-lock.yml
+.user.yml
+
+# banco local gerado pelo dbt (recriado a qualquer momento com `dbt build`)
+data/warehouse/*.duckdb
+data/warehouse/*.duckdb.wal
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# editor / so
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

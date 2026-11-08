@@ -1,0 +1,106 @@
+version: 2
+
+models:
+  - name: dim_vendedor
+    description: Vendedores com hierarquia (supervisor, gerente, revenda) do mês de referência. Inclui códigos vistos em pedidos e carteiras.
+    columns:
+      - name: codigo_vendedor
+        tests: [unique, not_null]
+      - name: vendedor
+        description: Rótulo pronto para filtro, no formato "511 - ALICE SOUTO".
+        tests: [not_null]
+
+  - name: dim_produto
+    description: SKUs com classificação comercial (marca, linha eco, refil, galão) e fatores de conversão.
+    columns:
+      - name: codigo_alternativo
+        tests: [unique, not_null]
+      - name: marca
+        tests: [not_null]
+      - name: fator_litros
+        tests: [not_null]
+
+  - name: fct_pedidos
+    description: >
+      Itens de pedido que contam como venda efetiva: só revenda com marca conhecida, sem reprogramados
+      e cancelados, devolução só após o acerto. Volume em litros pelo fator do produto.
+    columns:
+      - name: numero_pedido
+        tests: [not_null]
+      - name: codigo_produto_alternativo
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_produto')
+                field: codigo_alternativo
+      - name: codigo_vendedor_carteira
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendedor')
+                field: codigo_vendedor
+      - name: status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["ACERTADO", "ABERTO"]
+      - name: ocorrencia
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2]
+                quote: false
+      - name: litros
+        tests: [not_null]
+      - name: marca
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["LIMPORA", "BRILHAX", "NUVELLA", "ZESTRA", "VERDANTA", "ECOLIM", "BROTA", "MARE", "LIMPORA ZERO", "SUAVITTA", "FRESCOR"]
+
+  - name: fct_cobertura_produto
+    description: Cliente coberto em um SKU no mês (comprou ao menos 1 caixa somando os pedidos). Base de todas as coberturas.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [mes, codigo_produto, codigo_vendedor_carteira, codigo_cliente]
+    columns:
+      - name: data_cobertura
+        description: Dia em que o acumulado do mês chegou a 1 caixa.
+        tests: [not_null]
+      - name: qtd_vda
+        tests: [not_null]
+
+  - name: fct_meta_litros
+    description: Meta mensal de volume em litros por vendedor e produto, a partir do primeiro mês com pedidos.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [mes_ref, codigo_vendedor, codigo_produto_alternativo]
+    columns:
+      - name: meta_litros
+        tests: [not_null]
+
+  - name: fct_pedido_status
+    description: Destino de cada pedido (efetivo, em aberto, devolvido, reprogramado, cancelado) e se o cliente voltou em 15 dias.
+    columns:
+      - name: numero_pedido
+        tests: [not_null]
+      - name: tipo
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Efetivo", "Em aberto", "Devolvido", "Reprogramado", "Cancelado"]
+
+  - name: agg_meta_realizado_mensal
+    description: Meta x realizado de volume em litros por mês, vendedor e produto, com atingimento.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [mes, codigo_vendedor, codigo_produto_alternativo]
+    columns:
+      - name: atingimento
+        description: litros_venda / meta_litros. Nulo quando não há meta.

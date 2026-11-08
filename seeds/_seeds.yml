@@ -1,0 +1,16 @@
+version: 2
+
+seeds:
+  - name: chave_metas_cobertura
+    description: De-para entre o nome do indicador na planilha do comercial e o nome usado no BI.
+    columns:
+      - name: INDICADOR_PLANILHA
+        tests: [unique, not_null]
+      - name: INDICADOR_BI
+        tests: [not_null]
+
+  - name: feriados
+    description: Feriados usados no cálculo de dias úteis.
+    columns:
+      - name: DATA
+        tests: [unique, not_null]
